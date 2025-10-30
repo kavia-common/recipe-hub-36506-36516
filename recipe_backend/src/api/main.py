@@ -1,14 +1,12 @@
-from typing import List, Optional
+from typing import List
 
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.core.config import get_cors_origins, get_settings
 from src.db.session import Base, engine
-from dotenv import load_dotenv
-
-# Load environment variables (CORS settings, etc.)
-load_dotenv()
+from src.api.routers_auth import router as auth_router
+from src.api.routers_recipes import router as recipes_router
 
 API_TITLE = "Recipe Hub API"
 API_DESCRIPTION = (
@@ -24,14 +22,14 @@ app = FastAPI(
     openapi_tags=[
         {"name": "Health", "description": "Service health and metadata."},
         {"name": "Info", "description": "General information and usage notes."},
+        {"name": "Auth", "description": "User registration, login, and profile endpoints."},
+        {"name": "Recipes", "description": "Endpoints to manage recipes."},
     ],
 )
 
-# Configure CORS from env, fallback to wildcard for initial setup
-cors_origins_env: Optional[str] = os.getenv("CORS_ORIGINS")
-allow_origins: List[str] = ["*"]
-if cors_origins_env:
-    allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+# Configure CORS from env using config
+settings = get_settings()
+allow_origins: List[str] = get_cors_origins(settings)
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,3 +71,8 @@ def health_check():
 def websocket_info():
     """Describe WebSocket usage for API docs (placeholder)."""
     return {"websocket": "No active WebSocket endpoints yet."}
+
+
+# Include routers
+app.include_router(auth_router)
+app.include_router(recipes_router)
